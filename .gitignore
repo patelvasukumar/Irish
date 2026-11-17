@@ -1,0 +1,40 @@
+# Secrets (risks R5, R11)
+.env
+*.key
+configuration/.credential.key
+
+# Local data - never uploaded
+data/irish_store.json
+data/*.tmp
+data/*.corrupt.json
+history/*
+!history/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Expo (frontend)
+node_modules/
+.expo/
+dist/
+web-build/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# AI assistant files (kept locally, never uploaded)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+**/CLAUDE.md
+AGENTS.md
+**/AGENTS.md
