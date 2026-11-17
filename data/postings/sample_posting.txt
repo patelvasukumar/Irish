@@ -1,0 +1,18 @@
+Job Title: Junior Full Stack Developer
+Company: Maple Software
+Location: Ottawa, Ontario
+
+Join Maple Software, a growing Canadian SaaS company, as a Junior Full Stack Developer.
+
+What you will do
+- Build features with React and TypeScript on the frontend
+- Develop REST APIs with Node.js and Python
+- Work with PostgreSQL databases and write SQL queries
+- Deploy services with Docker and CI/CD pipelines on AWS
+
+What we are looking for
+- 1+ years of experience or a diploma in Computer Programming
+- Strong JavaScript and HTML/CSS skills
+- Experience with Git and Agile teams
+- Unit testing experience
+- Good communication and problem solving skills

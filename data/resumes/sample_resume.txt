@@ -1,0 +1,24 @@
+Alex Martin
+alex.martin@example.com | 613-555-0142 | Ottawa, ON | github.com/alexm
+
+Summary
+Computer Programming student at Algonquin College looking for a junior developer role.
+
+Skills
+Python, JavaScript, React, HTML, CSS, SQL, PostgreSQL, Git, Linux, Flask, Unit Testing, Agile, Teamwork, Communication
+
+Experience
+Warehouse Associate - Logistics Co. (2022 - Present) Ottawa, ON
+- Trained 5 new team members on safety and scanning procedures
+- Used Excel to track daily inventory counts
+
+IT Help Desk Volunteer - Community Centre (2023 - 2024)
+- Provided technical support and troubleshooting for 30+ staff computers
+
+Projects
+Budget Tracker: Flask web app with PostgreSQL to track expenses
+- Built REST API endpoints and wrote pytest unit tests
+Portfolio Website: React single page app deployed with GitHub Pages
+
+Education
+Computer Programming Diploma - Algonquin College (2024 - 2026)
