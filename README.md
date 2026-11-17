@@ -141,3 +141,5 @@ Irish/
 - The app never opens a site or applies without the user's permission for that site.
 - The mailbox is opened read-only; only subject, sender, time and link are saved (R9).
 - Job links to private/local network addresses are refused.
+
+> Local setup: backend (uvicorn) and frontend (Expo web / Expo Go) run instructions were tested on Windows.
