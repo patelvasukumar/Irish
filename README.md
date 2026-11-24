@@ -9,6 +9,7 @@ main -> managed by Vasu Patel
 Member Branch:
 Vasu Patel -> vasupatel Personal Branch
 CP -> chaitanyapatel
+Kavya Vasani -> kavyavasani
 
 ---
 

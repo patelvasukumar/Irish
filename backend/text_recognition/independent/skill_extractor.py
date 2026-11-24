@@ -217,8 +217,22 @@ def guess_title_and_company(text: str) -> dict[str, str | None]:
             company = m.group(2).strip()
     if not title and lines:
         title = lines[0][:120]
+        # "Backend Developer at Acme, Ottawa ON" -> title + company
+        m = re.match(r"^(.{3,80}?)\s+(?:at|@)\s+([A-Z][\w&.'\- ]{1,40}?)\s*(?:[,(|\-\u2013\u2014]|$)", lines[0])
+        if m:
+            title = m.group(1).strip()
+            company = company or m.group(2).strip()
+    if not company and len(lines) > 1:
+        # Second line such as "Shopify - Ottawa, ON (Hybrid)" or "Shopify | Remote"
+        m = re.match(r"^([A-Z][\w&.' ]{0,40}?)\s+[\-\u2013\u2014|\u00b7\u2022]\s+\S", lines[1])
+        if m:
+            company = m.group(1).strip()
     if not company:
-        m = re.search(r"(?i)\b(?:at|join)\s+([A-Z][\w&.\- ]{1,40}?)(?:[,.!\n]| is | we )", text or "")
+        # "at Acme" / "Join Acme" - only a capitalised name, never "join our team"
+        m = re.search(
+            r"\b(?i:at|join)\s+(?!(?i:our|the|a|an|us|this|my|your)\b)([A-Z][\w&.\- ]{1,40}?)(?:[,.!\n]| is | we | as )",
+            text or "",
+        )
         if m:
             company = m.group(1).strip()
     return {"title": title, "company": company}
