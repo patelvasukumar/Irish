@@ -14,6 +14,9 @@ export interface Resume {
   id: string;
   name: string;
   text?: string;
+  /** upload = file, tailored = copy of a submitted application's resume, text = old pasted resume */
+  source?: 'upload' | 'tailored' | 'text';
+  from_tailored_id?: string;
   created_at: string;
   analysis: {
     skills: string[];
@@ -75,7 +78,72 @@ export interface Tailored {
   score: number;
   llm: { provider: string; model: string };
   saved_path?: string;
+  posting_id?: string;
+  resume_id?: string | null;
   created_at: string;
+}
+
+// ---- Applications in progress (Tailor tab -> "Application progress") ----
+
+/** Where the selected resume came from (the "Choose a resume" popup). */
+export type ResumeSource = 'upload' | 'submitted' | 'profile';
+
+export interface Application {
+  id: string;
+  status: 'in_progress' | 'submitted';
+  resume_id: string | null;
+  resume_source: ResumeSource | null;
+  resume_name: string | null;
+  posting_id: string | null;
+  title: string | null;
+  company: string | null;
+  city: string | null;
+  province: string | null;
+  url: string | null;
+  match_score: number | null;
+  tailored_id: string | null;
+  credential_id: string | null;
+  /** Set when "Open job portal" was pressed -> "Waiting to submit". */
+  portal_opened_at: string | null;
+  submitted_at: string | null;
+  job_id: string | null;
+  created_at: string;
+  updated_at: string;
+  // Worked out by the backend
+  step: number;
+  total_steps: number;
+  step_label: string;
+  waiting_to_submit: boolean;
+  progress: number;
+}
+
+export interface ApplicationDetail extends Application {
+  resume: Resume | null;
+  posting: Posting | null;
+  tailored: Tailored | null;
+}
+
+export type ApplicationChanges = Partial<
+  Pick<Application, 'resume_id' | 'resume_source' | 'posting_id' | 'tailored_id' | 'match_score' | 'credential_id'>
+>;
+
+/** The resume used in one submitted application (same order as the Job Tracker). */
+export interface SubmittedResume {
+  job_id: string;
+  tailored_id: string;
+  title: string | null;
+  company: string | null;
+  city: string | null;
+  province: string | null;
+  status: JobStatus | null;
+  applied_at: string;
+  score: number | null;
+}
+
+export interface ResumeOptions {
+  submitted: SubmittedResume[];
+  uploads: Resume[];
+  profile: { saved: boolean; full_name: string | null; updated_at: string | null };
 }
 
 export interface HistoryItem {

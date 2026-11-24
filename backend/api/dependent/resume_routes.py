@@ -12,11 +12,14 @@ from backend.api.independent.schemas import (
     MatchRequest,
     PostingLink,
     PostingText,
+    ResumeFromTailored,
     ResumeText,
     SaveRequest,
     TailoredEdit,
     TailorRequest,
 )
+from backend.applications.dependent.application_service import resume_from_tailored
+from backend.applications.independent.application_rules import ApplicationError
 from backend.image_recognition.independent.ocr import SUPPORTED_IMAGES, OCRUnavailable, image_to_text
 from backend.job_tracker.dependent.tracker_service import add_job
 from backend.profile.dependent.profile_service import profile_resume_text
@@ -79,13 +82,22 @@ async def upload_resume(file: UploadFile = File(...)):
         raise HTTPException(422, f"Could not read the file: {exc}") from exc
     if len(text.strip()) < 30:
         raise HTTPException(422, "Could not find text in this file (is it a scanned image?)")
-    return get_store().insert(RESUMES, {"name": file.filename, "text": text, "analysis": analyse_document(text, "resume")})
+    return get_store().insert(RESUMES, {"name": file.filename, "text": text, "source": "upload",
+                                        "analysis": analyse_document(text, "resume")})
 
 
 @router.post("/resumes/text", summary="Paste a resume as text - C1")
 def add_resume_text(body: ResumeText):
-    return get_store().insert(RESUMES, {"name": body.name, "text": body.text,
+    return get_store().insert(RESUMES, {"name": body.name, "text": body.text, "source": "text",
                                         "analysis": analyse_document(body.text, "resume")})
+
+
+@router.post("/resumes/from-tailored", summary="Reuse the resume of a submitted application as a starting resume")
+def add_resume_from_tailored(body: ResumeFromTailored):
+    try:
+        return resume_from_tailored(body.tailored_id)
+    except ApplicationError as exc:
+        raise HTTPException(exc.status_code, str(exc)) from exc
 
 
 @router.get("/resumes")

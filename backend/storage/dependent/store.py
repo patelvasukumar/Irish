@@ -18,6 +18,7 @@ TAILORED = "tailored_resumes"
 JOBS = "tracked_jobs"
 EMAILS = "job_emails"
 CREDENTIALS = "credentials"
+APPLICATIONS = "applications"  # in-progress applications (Tailor tab)
 
 
 @lru_cache(maxsize=1)

@@ -8,6 +8,8 @@ export interface SegmentOption<T extends string> {
   value: T;
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Small count shown after the label (e.g. number of applications). */
+  badge?: number | string;
 }
 
 export interface SegmentedProps<T extends string> {
@@ -35,6 +37,11 @@ export function Segmented<T extends string>({ options, value, onChange }: Segmen
             <Text style={[styles.label, active && styles.activeLabel]} numberOfLines={1}>
               {o.label}
             </Text>
+            {o.badge !== undefined ? (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{o.badge}</Text>
+              </View>
+            ) : null}
           </Pressable>
         );
       })}
@@ -65,4 +72,13 @@ const styles = StyleSheet.create({
   active: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primarySoft },
   label: { fontSize: font.small, color: colors.textMuted, fontWeight: '500' },
   activeLabel: { color: colors.primaryDark, fontWeight: '700' },
+  badge: {
+    minWidth: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+  },
+  badgeText: { fontSize: font.tiny, fontWeight: '700', color: colors.primaryDark },
 });

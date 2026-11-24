@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 
+from backend.api.dependent.application_routes import router as application_router
 from backend.api.dependent.other_routes import cred_router, graph_router, profile_router, system_router
 from backend.api.dependent.resume_routes import router as resume_router
 from backend.api.dependent.tracker_routes import router as tracker_router
@@ -33,7 +34,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-for r in (system_router, resume_router, tracker_router, cred_router, profile_router, graph_router):
+for r in (
+    system_router, resume_router, application_router, tracker_router, cred_router, profile_router, graph_router,
+):
     app.include_router(r, prefix=settings.api_prefix)
 
 

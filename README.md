@@ -82,12 +82,14 @@ Details: [frontend/README.md](frontend/README.md).
 
 | Flow step | Method & path |
 |---|---|
-| Upload resume / paste resume | `POST /resumes/upload`, `POST /resumes/text` |
+| Upload resume / reuse the resume of a submitted application | `POST /resumes/upload`, `POST /resumes/from-tailored` |
+| Applications in progress (Tailor tab → Application progress) | `GET/POST /applications`, `GET/PATCH/DELETE /applications/{id}` |
+| "Choose a resume" popup (submitted, recent uploads, profile) | `GET /applications/resume-options` |
 | Job posting from link / text / screenshot | `POST /postings/link`, `/postings/text`, `/postings/image` |
 | Matching & missing skills + graph context | `POST /match` |
 | Write tailored resume | `POST /tailor` → `PUT /tailored/{id}` to edit |
 | Save as DOCX/PDF/TXT into `history/<company>/` | `POST /tailored/{id}/save`, `GET /history`, `DELETE /history?target=all` |
-| Apply → add to tracker | `POST /apply` |
+| Open job portal → "Waiting to submit" → Mark as submitted → tracker | `POST /applications/{id}/open-portal`, `POST /applications/{id}/submit` |
 | Tracker list, filters, details, status | `GET /tracker/jobs`, `GET/PATCH /tracker/jobs/{id}` |
 | Test email / mailbox check | `POST /tracker/emails`, `POST /tracker/check-mailbox` |
 | After "Successful" | `POST /tracker/success-action` (delete_history / save_zip / stop_tracker), `GET /tracker/export` |

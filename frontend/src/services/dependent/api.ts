@@ -5,6 +5,9 @@
 import { platform, PickedFile } from '@common/dependent';
 
 import type {
+  Application,
+  ApplicationChanges,
+  ApplicationDetail,
   Credential,
   EmailResult,
   Health,
@@ -17,6 +20,7 @@ import type {
   Posting,
   Profile,
   Resume,
+  ResumeOptions,
   SuccessAction,
   Tailored,
   TailorResult,
@@ -98,7 +102,8 @@ export class ApiClient {
 
   // ---- resumes (C1)
   uploadResume = (file: PickedFile) => this.upload<Resume>('/resumes/upload', file);
-  pasteResume = (text: string, name = 'Pasted resume') => this.post<Resume>('/resumes/text', { text, name });
+  /** Reuse the resume of a submitted application as the starting resume. */
+  resumeFromTailored = (tailored_id: string) => this.post<Resume>('/resumes/from-tailored', { tailored_id });
   listResumes = () => this.get<Resume[]>('/resumes');
   deleteResume = (id: string) => this.del<{ deleted: string }>(`/resumes/${id}`);
 
@@ -122,8 +127,22 @@ export class ApiClient {
       file_name: file_name || null,
       company: company || null,
     });
-  apply = (tailored_id: string, credential_id: string | null) =>
-    this.post<{ job: Job; automation: string; open_url: string | null }>('/apply', { tailored_id, credential_id });
+
+  // ---- applications in progress (Tailor tab -> "Application progress")
+  applications = () => this.get<Application[]>('/applications');
+  application = (id: string) => this.get<ApplicationDetail>(`/applications/${id}`);
+  createApplication = (changes: ApplicationChanges = {}) => this.post<Application>('/applications', changes);
+  updateApplication = (id: string, changes: ApplicationChanges) => this.patch<Application>(`/applications/${id}`, changes);
+  deleteApplication = (id: string) => this.del<{ deleted: string }>(`/applications/${id}`);
+  /** Step 5: about to apply on the job portal -> "Waiting to submit". */
+  openPortal = (id: string, credential_id: string | null) =>
+    this.post<{ application: Application; open_url: string | null; automation: string }>(
+      `/applications/${id}/open-portal`,
+      { credential_id },
+    );
+  /** "Mark as submitted": adds the job to the tracker. */
+  submitApplication = (id: string) => this.post<{ application: Application; job: Job }>(`/applications/${id}/submit`);
+  resumeOptions = () => this.get<ResumeOptions>('/applications/resume-options');
 
   // ---- history
   history = () => this.get<HistoryItem[]>('/history');

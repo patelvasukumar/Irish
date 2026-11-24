@@ -48,6 +48,28 @@ class ApplyRequest(BaseModel):
     credential_id: str | None = None
 
 
+class ResumeFromTailored(BaseModel):
+    tailored_id: str
+
+
+# ---- Applications in progress (Tailor tab) --------------------------------
+ResumeSource = Literal["upload", "submitted", "profile"]
+
+
+class ApplicationChanges(BaseModel):
+    """Only the fields that are sent are changed; send null to clear one."""
+    resume_id: str | None = None
+    resume_source: ResumeSource | None = None
+    posting_id: str | None = None
+    tailored_id: str | None = None
+    match_score: int | None = Field(None, ge=0, le=100)
+    credential_id: str | None = None
+
+
+class OpenPortalRequest(BaseModel):
+    credential_id: str | None = None
+
+
 # ---- Tracker --------------------------------------------------------------
 class JobCreate(BaseModel):
     title: str = Field(..., max_length=200)

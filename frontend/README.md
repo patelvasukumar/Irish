@@ -33,7 +33,7 @@ frontend/
     settings.tsx
   src/screens/
     dependent/             Screens (call the API + common components)
-    independent/           Pure helpers used by screens (tracker filters)
+    independent/           Pure helpers used by screens (tracker filters, application cards)
   src/services/
     dependent/             API client, settings (backend address), hooks, pickers
     independent/           Types and formatting helpers
