@@ -5,7 +5,9 @@
 import { platform, PickedFile } from '@common/dependent';
 
 import type {
+  BestResumes,
   Credential,
+  Duplicates,
   EmailResult,
   Health,
   HistoryItem,
@@ -17,6 +19,7 @@ import type {
   Posting,
   Profile,
   Resume,
+  SimilarJobs,
   SuccessAction,
   Tailored,
   TailorResult,
@@ -108,6 +111,12 @@ export class ApiClient {
   postingFromImage = (file: PickedFile) => this.upload<Posting>('/postings/image', file);
   listPostings = () => this.get<Posting[]>('/postings');
   getPosting = (id: string) => this.get<Posting>(`/postings/${id}`);
+
+  // ---- semantic match (embeddings + pgvector)
+  bestResumes = (postingId: string, limit = 3) =>
+    this.get<BestResumes>(`/postings/${postingId}/best-resumes`, { limit });
+  duplicates = (postingId: string) => this.get<Duplicates>(`/postings/${postingId}/duplicates`);
+  similarJobs = (jobId: string, limit = 5) => this.get<SimilarJobs>(`/tracker/jobs/${jobId}/similar`, { limit });
 
   // ---- match (C1 + C4) and tailor (C2)
   match = (posting_id: string, resume_id: string | null) =>

@@ -20,6 +20,7 @@ from backend.api.independent.schemas import (
 from backend.image_recognition.independent.ocr import SUPPORTED_IMAGES, OCRUnavailable, image_to_text
 from backend.job_tracker.dependent.tracker_service import add_job
 from backend.profile.dependent.profile_service import profile_resume_text
+from backend.semantic_match.dependent import semantic_service as semantic
 from backend.storage.dependent.store import CREDENTIALS, POSTINGS, RESUMES, TAILORED, get_store
 from backend.text_generation.dependent.resume_writer import analyse_match, tailor_resume
 from backend.text_recognition.dependent.posting_reader import PostingFetchError, fetch_posting
@@ -59,12 +60,14 @@ def _resume_text(resume_id: str | None) -> str:
 
 def _save_posting(text: str, source: str, url: str | None = None, extra: dict | None = None) -> dict:
     analysis = analyse_document(text, "posting")
-    return get_store().insert(POSTINGS, {
+    row = get_store().insert(POSTINGS, {
         "text": text, "source": source, "url": url, "analysis": analysis,
         "title": analysis.get("title"), "company": analysis.get("company"),
         "city": analysis["location"]["city"], "province": analysis["location"]["province"],
         **(extra or {}),
     })
+    semantic.index_row(semantic.POSTING, row)
+    return row
 
 
 # ---- Resumes ---------------------------------------------------------------
@@ -79,13 +82,17 @@ async def upload_resume(file: UploadFile = File(...)):
         raise HTTPException(422, f"Could not read the file: {exc}") from exc
     if len(text.strip()) < 30:
         raise HTTPException(422, "Could not find text in this file (is it a scanned image?)")
-    return get_store().insert(RESUMES, {"name": file.filename, "text": text, "analysis": analyse_document(text, "resume")})
+    row = get_store().insert(RESUMES, {"name": file.filename, "text": text, "analysis": analyse_document(text, "resume")})
+    await run_in_threadpool(semantic.index_row, semantic.RESUME, row)
+    return row
 
 
 @router.post("/resumes/text", summary="Paste a resume as text - C1")
 def add_resume_text(body: ResumeText):
-    return get_store().insert(RESUMES, {"name": body.name, "text": body.text,
-                                        "analysis": analyse_document(body.text, "resume")})
+    row = get_store().insert(RESUMES, {"name": body.name, "text": body.text,
+                                       "analysis": analyse_document(body.text, "resume")})
+    semantic.index_row(semantic.RESUME, row)
+    return row
 
 
 @router.get("/resumes")
@@ -102,6 +109,7 @@ def get_resume(resume_id: str):
 def remove_resume(resume_id: str):
     if not get_store().delete(RESUMES, resume_id):
         raise HTTPException(404, "resume not found")
+    semantic.remove_row(semantic.RESUME, resume_id)
     return {"deleted": resume_id}
 
 
@@ -150,6 +158,7 @@ def get_posting(posting_id: str):
 def remove_posting(posting_id: str):
     if not get_store().delete(POSTINGS, posting_id):
         raise HTTPException(404, "job posting not found")
+    semantic.remove_row(semantic.POSTING, posting_id)
     return {"deleted": posting_id}
 
 
@@ -157,7 +166,12 @@ def remove_posting(posting_id: str):
 @router.post("/match", summary="Matching and missing skills + related graph skills - C1 + C4")
 def match(body: MatchRequest):
     posting = _get_or_404(POSTINGS, body.posting_id)
-    return analyse_match(_resume_text(body.resume_id), posting["text"])
+    resume = _get_or_404(RESUMES, body.resume_id) if body.resume_id else None
+    resume_text = resume["text"] if resume else _resume_text(None)
+    result = analyse_match(resume_text, posting["text"])
+    # Overall fit by meaning (embeddings) next to the skill-word score
+    result["fit"] = semantic.fit_for(posting, resume_text, resume)
+    return result
 
 
 @router.post("/tailor", summary="Write the tailored resume - C2")
@@ -246,5 +260,6 @@ def apply(body: ApplyRequest):
         "company": posting.get("company") or tailored.get("company"),
         "city": posting.get("city"), "province": posting.get("province"),
         "url": posting.get("url"), "resume_id": body.tailored_id,
+        "posting_id": tailored.get("posting_id"),
     })
     return {"job": job, "automation": automation, "open_url": posting.get("url")}

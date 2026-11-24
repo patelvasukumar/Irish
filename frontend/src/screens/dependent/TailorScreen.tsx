@@ -3,6 +3,7 @@
  *   1. Resume (upload / paste / saved / profile)      -> C1
  *   2. Job posting (link / text / screenshot)        -> C1, C3
  *   3. Matching + missing skills, graph context      -> C1, C4
+ *      + overall fit, best saved resume, duplicate warning (semantic match)
  *   4. Tailored resume: write, edit, save, apply     -> C2, C7, C8
  */
 import { router } from 'expo-router';
@@ -34,7 +35,9 @@ import { pickResumeFile, pickScreenshot } from '../../services/dependent/pickers
 import { useApi } from '../../services/dependent/settings';
 import { formatDate, isValidUrl, place, safeFileName } from '../../services/independent/format';
 import type {
+  BestResumes,
   Credential,
+  Duplicates,
   LlmProvider,
   MatchResult,
   Posting,
@@ -73,6 +76,11 @@ export default function TailorScreen() {
   const [postingError, setPostingError] = useState<string | null>(null);
   const [busyPosting, setBusyPosting] = useState(false);
 
+  // ---- semantic match: compare by meaning (embeddings + pgvector)
+  const [best, setBest] = useState<BestResumes | null>(null);
+  const [dup, setDup] = useState<Duplicates | null>(null);
+  const semanticFor = useRef<string | null>(null);
+
   // ---- step 3 + 4
   const [match, setMatch] = useState<MatchResult | null>(null);
   const [instructions, setInstructions] = useState('');
@@ -101,6 +109,18 @@ export default function TailorScreen() {
       setSaved(null);
       setApplied(null);
       const token = ++matchToken.current;
+      if (!p) {
+        semanticFor.current = null;
+        setBest(null);
+        setDup(null);
+      } else if (semanticFor.current !== p.id) {
+        semanticFor.current = p.id;
+        setBest(null);
+        setDup(null);
+        // Optional extras - the flow works the same if these fail.
+        api.duplicates(p.id).then((d) => semanticFor.current === p.id && setDup(d)).catch(() => {});
+        api.bestResumes(p.id).then((b) => semanticFor.current === p.id && setBest(b)).catch(() => {});
+      }
       if (c && p) {
         run('match', () => api.match(p.id, c.kind === 'resume' ? c.resume.id : null)).then((m) => {
           if (m && token === matchToken.current) setMatch(m);
@@ -111,6 +131,12 @@ export default function TailorScreen() {
   );
   const selectResume = (c: ResumeChoice) => applyInputs(c, posting);
   const selectPosting = (p: Posting | null) => applyInputs(choice, p);
+
+  const pickSavedResume = async (resumeId: string) => {
+    const list = await run('resume', () => api.listResumes());
+    const r = list?.find((x) => x.id === resumeId);
+    if (r) selectResume({ kind: 'resume', resume: r });
+  };
 
   const changeResumeMode = (mode: ResumeMode) => {
     setResumeMode(mode);
@@ -252,6 +278,21 @@ export default function TailorScreen() {
           <SkillList skills={choice.resume.analysis.skills} />
         ) : choice?.kind === 'profile' ? null : (
           <>
+            {best?.available && best.resumes.length > 0 && (
+              <View style={{ gap: spacing.xs }}>
+                <Label>Best fit for this job among your saved resumes</Label>
+                <ChipRow>
+                  {best.resumes.map((b) => (
+                    <Chip
+                      key={b.resume_id}
+                      icon="sparkles-outline"
+                      label={`${b.name} · ${b.fit}% fit`}
+                      onPress={() => pickSavedResume(b.resume_id)}
+                    />
+                  ))}
+                </ChipRow>
+              </View>
+            )}
             <Segmented
               value={resumeMode}
               onChange={changeResumeMode}
@@ -339,6 +380,7 @@ export default function TailorScreen() {
               <Muted>Asks for {posting.analysis.years_experience_required}+ years of experience.</Muted>
             ) : null}
             <SkillList skills={posting.analysis.skills} />
+            <DuplicateWarning dup={dup} />
           </>
         ) : (
           <>
@@ -418,6 +460,7 @@ export default function TailorScreen() {
       >
         {busy === 'match' && <Muted>Comparing skills…</Muted>}
         {match && <MatchView match={match} />}
+        {match && <BetterResume best={best} match={match} choice={choice} onUse={pickSavedResume} />}
       </Card>
 
       {/* STEP 4 */}
@@ -554,15 +597,77 @@ function SkillList({ skills }: { skills: string[] }) {
   );
 }
 
+function DuplicateWarning({ dup }: { dup: Duplicates | null }) {
+  if (!dup?.available || dup.duplicates.length === 0) return null;
+  const first = dup.duplicates[0];
+  const app = dup.duplicates.flatMap((d) => d.applications)[0];
+  const what = [first.title, first.company].filter(Boolean).join(' · ') || 'a posting';
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Banner
+        tone="warning"
+        title={dup.already_applied ? 'You may have applied to this job already' : 'You saved this job before'}
+        message={
+          app
+            ? `It looks the same as "${what}", applied on ${formatDate(app.applied_at)} (status: ${app.status}).`
+            : `It looks the same as "${what}", saved on ${formatDate(first.created_at)}.`
+        }
+      />
+      {app ? (
+        <Row>
+          <Button title="View that application" variant="secondary" icon="list-outline" small onPress={() => router.push(`/tracker/${app.job_id}`)} />
+        </Row>
+      ) : null}
+    </View>
+  );
+}
+
+function BetterResume({
+  best,
+  match,
+  choice,
+  onUse,
+}: {
+  best: BestResumes | null;
+  match: MatchResult;
+  choice: ResumeChoice;
+  onUse: (id: string) => void;
+}) {
+  if (!best?.available || !match.fit?.available) return null;
+  const top = best.resumes[0];
+  const currentId = choice?.kind === 'resume' ? choice.resume.id : null;
+  // Only suggest when another saved resume is clearly better (5+ points).
+  if (!top || top.resume_id === currentId || top.fit < match.fit.score + 5) return null;
+  return (
+    <View style={{ gap: spacing.sm }}>
+      <Banner
+        tone="info"
+        title="Another saved resume fits better"
+        message={`"${top.name}" has an overall fit of ${top.fit}% for this job (this one: ${match.fit.score}%).`}
+      />
+      <Row>
+        <Button title={`Use "${top.name}"`} variant="secondary" icon="swap-horizontal-outline" small onPress={() => onUse(top.resume_id)} />
+      </Row>
+    </View>
+  );
+}
+
 function MatchView({ match }: { match: MatchResult }) {
+  const fit = match.fit?.available ? match.fit : null;
   return (
     <View style={{ gap: spacing.md }}>
       <View style={styles.matchTop}>
         <ScoreRing score={match.score} />
+        {fit ? <ScoreRing score={fit.score} label="fit" /> : null}
         <View style={{ flex: 1, gap: 4, minWidth: 180 }}>
           <Label>
             {match.matched.length} of {match.matched.length + match.missing.length} skills in the posting are on your resume
           </Label>
+          {fit ? (
+            <Muted>
+              {`Overall fit ${fit.score}%: how close your whole resume is to the job by meaning, so "machine learning" still counts for "ML".`}
+            </Muted>
+          ) : null}
           {match.role_skills.title ? (
             <Muted>
               Closest role in the skill graph: {match.role_skills.title} ({match.role_skills.skills.join(', ')})

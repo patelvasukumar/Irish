@@ -34,7 +34,7 @@ import {
 import { useAction, useLoader } from '../../services/dependent/hooks';
 import { useApi } from '../../services/dependent/settings';
 import { formatDate, place } from '../../services/independent/format';
-import { Job, JOB_STATUSES, JobStatus, Tailored, TrackerEmail } from '../../services/independent/types';
+import { Job, JOB_STATUSES, JobStatus, SimilarJobs, Tailored, TrackerEmail } from '../../services/independent/types';
 
 export default function JobDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -115,6 +115,8 @@ export default function JobDetailScreen() {
           )}
         </Row>
       </Card>
+
+      <SimilarJobsCard key={job.id} jobId={job.id} />
 
       <NotesCard
         key={`${job.id}:${job.notes ?? ''}`}
@@ -371,6 +373,42 @@ function MoveEmailDialog({
         ))
       )}
     </Dialog>
+  );
+}
+
+/** Past applications that look like this one (semantic match) and how they went. */
+function SimilarJobsCard({ jobId }: { jobId: string }) {
+  const api = useApi();
+  const [data, setData] = useState<SimilarJobs | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    api
+      .similarJobs(jobId)
+      .then((d) => live && setData(d))
+      .catch(() => live && setData(null));
+    return () => {
+      live = false;
+    };
+  }, [api, jobId]);
+
+  // Hidden when semantic match is off or there is nothing similar yet.
+  if (!data?.available || data.jobs.length === 0) return null;
+  const summary = Object.entries(data.summary)
+    .map(([status, n]) => `${n} ${status}`)
+    .join(' · ');
+  return (
+    <Card title="Similar past applications" icon="git-compare-outline" subtitle={summary}>
+      {data.jobs.map((j) => (
+        <Card
+          key={j.job_id}
+          title={j.title}
+          subtitle={`${j.company} · applied ${formatDate(j.applied_at)} · ${j.fit}% similar`}
+          action={<StatusBadge status={j.status} />}
+          onPress={() => router.push(`/tracker/${j.job_id}`)}
+        />
+      ))}
+    </Card>
   );
 }
 

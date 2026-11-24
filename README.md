@@ -20,7 +20,8 @@ Kavya Vasani -> kavyavasani
 | Backend (FastAPI, all components C1–C4, C7, C8, profile) | ✅ First version |
 | Frontend (Expo SDK 58 + Expo Router: web / Android / iOS) | ✅ First version — see [frontend/README.md](frontend/README.md) |
 | Database: PostgreSQL (C5) | ✅ Ready — used when `DATABASE_URL` is set, local JSON file otherwise |
-| Database: pgvector, Neo4j | ⏳ Later — an in-memory skill graph is used until then |
+| Semantic match (embeddings + pgvector) | ✅ First version — overall fit, best resume, duplicate postings, similar past jobs |
+| Database: Neo4j | ⏳ Later — an in-memory skill graph is used until then |
 
 ## Components
 
@@ -30,7 +31,8 @@ Kavya Vasani -> kavyavasani
 | C2 | Text generation | `backend/text_generation` | **Free LLMs**: Ollama (local, default), Groq or Gemini free tier; offline template fallback |
 | C3 | Image recognition | `backend/image_recognition` | Tesseract OCR (pytesseract + Pillow) |
 | C4 | Graph RAG | `backend/graph_rag` | Neo4j when configured, in-memory skill graph otherwise |
-| C5 | Data store | `backend/storage` | PostgreSQL (`DATABASE_URL`), local JSON file fallback; pgvector later |
+| C5 | Data store | `backend/storage` | PostgreSQL (`DATABASE_URL`), local JSON file fallback |
+| — | Semantic match | `backend/semantic_match` | fastembed `bge-small-en-v1.5` (free, offline) + pgvector, in-app search fallback |
 | C7 | Job tracker agent | `backend/job_tracker` | Rule-based email classifier, read-only IMAP mailbox |
 | C8 | Credential manager | `backend/credential_manager` | Fernet-encrypted logins, local key file only |
 | — | Profile form | `backend/profile` | Builds a resume when the user has none |
@@ -77,6 +79,22 @@ Optional — without it the app keeps data in `data/irish_store.json`.
 
 Tables are defined in `database/postgres_schema.sql` (one table per collection, record kept as JSONB).
 Empty `DATABASE_URL` again to go back to the JSON file.
+
+### Semantic match (embeddings + pgvector)
+
+Compares resumes and postings by **meaning**, not exact words ("ML engineer" matches "machine learning"):
+
+- **Overall fit** — `POST /match` now also returns `fit` (0–100) next to the skill score
+- **Best resume for this job** — `GET /postings/{id}/best-resumes`
+- **Duplicate posting / already applied** — `GET /postings/{id}/duplicates`
+- **Similar past applications and their outcome** — `GET /tracker/jobs/{id}/similar`
+
+The model (`BAAI/bge-small-en-v1.5`, ~130 MB) downloads once into `data/embedding_model/` on first use and then runs offline.
+With PostgreSQL + the pgvector extension, vectors are stored in a `vector` column with an HNSW index;
+otherwise they are kept in the normal store and searched in the app. Set `EMBEDDINGS_ENABLED=false` to turn it off.
+
+pgvector on Windows: build it with Visual Studio C++ tools (`nmake /F Makefile.win`, see https://github.com/pgvector/pgvector#windows)
+and copy `vector.dll`, `vector.control` and `sqlector--*.sql` into the PostgreSQL folder.
 
 ### OCR setup (C3)
 

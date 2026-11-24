@@ -57,7 +57,47 @@ export interface MatchResult {
   related: RelatedSkill[];
   role_skills: { title: string | null; skills: string[] };
   graph_backend: string;
+  /** Overall fit by meaning (embeddings). Missing on tailor results. */
+  fit?: SemanticFit;
 }
+
+// ---- Semantic match (embeddings + pgvector)
+export type SemanticFit =
+  | { available: true; score: number; similarity: number }
+  | { available: false; reason: string };
+
+type Unavailable = { available: false; reason: string };
+
+export interface BestResume {
+  resume_id: string;
+  name: string;
+  created_at: string;
+  fit: number;
+  similarity: number;
+  skill_score: number;
+}
+export type BestResumes = { available: true; resumes: BestResume[] } | Unavailable;
+
+export interface DuplicatePosting {
+  posting_id: string;
+  title: string | null;
+  company: string | null;
+  created_at: string;
+  similarity: number;
+  applications: { job_id: string; status: string; applied_at: string }[];
+}
+export type Duplicates = { available: true; duplicates: DuplicatePosting[]; already_applied: boolean } | Unavailable;
+
+export interface SimilarJob {
+  job_id: string;
+  title: string;
+  company: string;
+  status: string;
+  applied_at: string;
+  fit: number;
+  similarity: number;
+}
+export type SimilarJobs = { available: true; jobs: SimilarJob[]; summary: Record<string, number> } | Unavailable;
 
 export interface TailorResult {
   id: string;
@@ -108,6 +148,7 @@ export interface Job {
   applied_at: string;
   notes: string;
   resume_id: string | null;
+  posting_id?: string | null;
   status_history: { status: JobStatus; at: string; by: 'user' | 'agent' }[];
   emails?: TrackerEmail[];
   prompt_success_options?: SuccessAction[] | null;

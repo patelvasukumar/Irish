@@ -72,6 +72,14 @@ class Settings:
         _env("LOCAL_STORE_FILE", str(ROOT_DIR / "data" / "irish_store.json"))
     )
 
+    # ---- Semantic match (embeddings + pgvector) ----------------------------
+    # Free local model via fastembed; downloaded once (~130 MB) on first use.
+    embeddings_enabled: bool = _env("EMBEDDINGS_ENABLED", "true").lower() == "true"
+    embedding_model: str = _env("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+    embedding_cache_dir: Path = Path(
+        _env("EMBEDDING_CACHE_DIR", str(ROOT_DIR / "data" / "embedding_model"))
+    )
+
     # ---- Files -------------------------------------------------------------
     history_dir: Path = Path(_env("HISTORY_DIR", str(ROOT_DIR / "history")))
     upload_max_mb: int = int(_env("UPLOAD_MAX_MB", "10"))

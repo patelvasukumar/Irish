@@ -7,6 +7,7 @@ configuration/.credential.key
 data/irish_store.json
 data/*.tmp
 data/*.corrupt.json
+data/embedding_model/
 history/*
 !history/.gitkeep
 

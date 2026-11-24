@@ -16,10 +16,12 @@ cryptography>=43.0
 # C5 Data store - PostgreSQL driver (used when DATABASE_URL is set)
 psycopg[binary,pool]>=3.2
 
+# Semantic match - free local embedding model (ONNX, no GPU)
+fastembed>=0.4
+
 # Tests
 pytest>=8.0
 
 # Optional - installed when we set up the databases / cloud
 # neo4j>=5.20
-# pgvector>=0.3
 # google-cloud-storage>=2.18

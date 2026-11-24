@@ -12,5 +12,6 @@ os.environ.update({
     "CREDENTIAL_KEY_FILE": str(_TMP / "cred.key"),
     "NEO4J_URI": "",
     "DATABASE_URL": "",
+    "EMBEDDINGS_ENABLED": "false",  # test_semantic.py turns it on with a fake model
 })
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Irish/

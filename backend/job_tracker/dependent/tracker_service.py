@@ -46,6 +46,7 @@ def add_job(data: dict) -> dict:
         "applied_at": data.get("applied_at") or _now(),
         "notes": data.get("notes", ""),
         "resume_id": data.get("resume_id"),
+        "posting_id": data.get("posting_id"),
         "status_history": [{"status": data.get("status") or JobStatus.APPLIED.value, "at": _now(), "by": "user"}],
     }
     return get_store().insert(JOBS, row)

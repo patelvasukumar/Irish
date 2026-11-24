@@ -77,18 +77,18 @@ export function StatusBadge({ status }: { status: string }) {
 }
 
 /** Circular match score (0-100). Drawn with plain Views so it works everywhere. */
-export function ScoreRing({ score, size = 92 }: { score: number; size?: number }) {
+export function ScoreRing({ score, size = 92, label = 'match' }: { score: number; size?: number; label?: string }) {
   const tone = score >= 70 ? colors.primary : score >= 40 ? colors.warning : colors.danger;
   return (
     <View
-      accessibilityLabel={`Match score ${score} percent`}
+      accessibilityLabel={`${label} score ${score} percent`}
       style={[
         styles.ring,
         { width: size, height: size, borderRadius: size / 2, borderColor: tone },
       ]}
     >
       <Text style={[styles.ringValue, { color: tone }]}>{score}%</Text>
-      <Text style={styles.ringLabel}>match</Text>
+      <Text style={styles.ringLabel}>{label}</Text>
     </View>
   );
 }
