@@ -18,7 +18,8 @@ CP -> chaitanyapatel
 |---|---|
 | Backend (FastAPI, all components C1–C4, C7, C8, profile) | ✅ First version |
 | Frontend (Expo SDK 58 + Expo Router: web / Android / iOS) | ✅ First version — see [frontend/README.md](frontend/README.md) |
-| Database (PostgreSQL + pgvector, Neo4j) | ⏳ Later — a local JSON store and an in-memory skill graph are used until then |
+| Database: PostgreSQL (C5) | ✅ Ready — used when `DATABASE_URL` is set, local JSON file otherwise |
+| Database: pgvector, Neo4j | ⏳ Later — an in-memory skill graph is used until then |
 
 ## Components
 
@@ -28,7 +29,7 @@ CP -> chaitanyapatel
 | C2 | Text generation | `backend/text_generation` | **Free LLMs**: Ollama (local, default), Groq or Gemini free tier; offline template fallback |
 | C3 | Image recognition | `backend/image_recognition` | Tesseract OCR (pytesseract + Pillow) |
 | C4 | Graph RAG | `backend/graph_rag` | Neo4j when configured, in-memory skill graph otherwise |
-| C5 | Data store | `backend/storage` | Temporary JSON store → PostgreSQL + pgvector later |
+| C5 | Data store | `backend/storage` | PostgreSQL (`DATABASE_URL`), local JSON file fallback; pgvector later |
 | C7 | Job tracker agent | `backend/job_tracker` | Rule-based email classifier, read-only IMAP mailbox |
 | C8 | Credential manager | `backend/credential_manager` | Fernet-encrypted logins, local key file only |
 | — | Profile form | `backend/profile` | Builds a resume when the user has none |
@@ -62,6 +63,19 @@ Other free options — set `LLM_PROVIDER` in `.env`:
 - `stub` — no AI, template only (used by the tests)
 
 If the chosen LLM is not reachable, the app falls back to the offline template so the demo never breaks (`LLM_FALLBACK_TO_STUB=true`). Changing the model is demo step 8: edit `configuration/settings.py` / `.env`.
+
+### Database setup (C5, PostgreSQL)
+
+Optional — without it the app keeps data in `data/irish_store.json`.
+
+1. Install PostgreSQL from https://www.postgresql.org/download/windows/ (remember the password).
+2. In `.env` set `DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/irish`
+3. Create the database and tables, and copy your old JSON data in:
+   `python -m scripts.setup_postgres --migrate`
+4. Restart the backend. `GET /api/health` shows `"database": "postgresql"`.
+
+Tables are defined in `database/postgres_schema.sql` (one table per collection, record kept as JSONB).
+Empty `DATABASE_URL` again to go back to the JSON file.
 
 ### OCR setup (C3)
 
@@ -105,6 +119,7 @@ python -m configuration.local_delete all                 # or a file name
 python -m configuration.google_cloud_upload history\Company\my_resume.pdf
 python -m configuration.google_cloud_delete all
 python -m scripts.export_neo4j_seed                      # writes database/neo4j_seed.cypher
+python -m scripts.setup_postgres --migrate               # PostgreSQL database + tables + copy JSON data
 ```
 
 ## Tests
@@ -114,6 +129,7 @@ python -m pytest testing/unit_tests -q
 ```
 
 Tests use a temporary data folder and the offline `stub` LLM, so they never touch your real data or need a model.
+To also test the PostgreSQL store, set `$env:TEST_DATABASE_URL = "postgresql://postgres:PASSWORD@localhost:5432/irish_test"` (a throwaway database).
 
 ## Folder structure
 
@@ -130,7 +146,7 @@ Irish/
                      job_tracker/ (C7), credential_manager/ (C8), profile/
   testing/           photo/  video/  text/  unit_tests/
   history/           saved resumes (local only, git-ignored)
-  database/          PostgreSQL and Neo4j setup scripts
+  database/          postgres_schema.sql (C5) and neo4j_seed.cypher (C4)
   scripts/           utilities
   data/              sample resumes and job postings
 ```
