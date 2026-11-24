@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,7 +41,17 @@ class JsonStore:
     def _flush(self) -> None:
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(self._data, indent=2, ensure_ascii=False), encoding="utf-8")
-        tmp.replace(self.path)
+        # On Windows, antivirus or the search indexer can hold the file for a
+        # moment right after a write, making the rename fail with "Access is
+        # denied". Retry briefly before giving up.
+        for attempt in range(10):
+            try:
+                tmp.replace(self.path)
+                return
+            except PermissionError:
+                if attempt == 9:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
 
     def _col(self, collection: str) -> dict[str, dict[str, Any]]:
         return self._data.setdefault(collection, {})
